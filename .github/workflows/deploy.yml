@@ -39,29 +39,6 @@ jobs:
           echo "CLOUDFLARE_ACCOUNT_ID=$ACCT" >> "$GITHUB_ENV"
           echo "Using account id: $ACCT"
 
-      - name: Ensure KV namespace exists
-        env:
-          CLOUDFLARE_API_KEY: ${{ secrets.CLOUDFLARE_API_KEY }}
-          CLOUDFLARE_EMAIL: ${{ secrets.CLOUDFLARE_EMAIL }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ env.CLOUDFLARE_ACCOUNT_ID }}
-        run: |
-          set +e
-          # The MEKV namespace already exists (id below). Reuse it; only create if truly missing.
-          EXISTING_ID="4a9230e7bb794fe4b9f513d38957c8e4"
-          LIST=$(npx wrangler kv namespace list --config wrangler.jsonc 2>&1)
-          if ! echo "$LIST" | grep -q "$EXISTING_ID"; then
-            echo "MEKV namespace not found, creating..."
-            CREATE=$(npx wrangler kv namespace create MEKV --config wrangler.jsonc 2>&1)
-            echo "$CREATE"
-            NEW_ID=$(echo "$CREATE" | grep -o '[0-9a-f]\{32\}' | head -1)
-            [ -z "$NEW_ID" ] && NEW_ID="$EXISTING_ID"
-          else
-            NEW_ID="$EXISTING_ID"
-          fi
-          echo "Using KV id: $NEW_ID"
-          node -e "const fs=require('fs');const p='wrangler.jsonc';let s=fs.readFileSync(p,'utf8');s=s.replace(/\"id\":\s*\"[0-9a-f]{32}\"/,'\"id\": \"'+process.env.KVID+'\"');fs.writeFileSync(p,s);" KVID="$NEW_ID"
-          echo "Patched wrangler.jsonc"
-
       - name: Deploy
         uses: cloudflare/wrangler-action@v3
         with:
