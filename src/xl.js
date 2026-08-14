@@ -66,10 +66,10 @@ export async function getOtp(env, contact) {
     "Ax-Request-Id": crypto.randomUUID(),
     Host: hostOf(env.BASE_CIAM_URL),
   };
-  const resp = await fetch(url, {
+  const qs = new URLSearchParams({ contact, contactType: "SMS", alternateContact: "false" });
+  const resp = await fetch(`${url}?${qs.toString()}`, {
     method: "GET",
     headers,
-    params: { contact, contactType: "SMS", alternateContact: "false" },
   });
   const body = await resp.json();
   if (!body.subscriber_id) throw new Error(body.error || "No subscriber_id");
