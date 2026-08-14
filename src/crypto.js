@@ -172,7 +172,8 @@ export function javaLikeTimestamp(now) {
   tz = Math.abs(tz);
   const hh = String(Math.floor(tz / 60)).padStart(2, "0");
   const mm = String(tz % 60).padStart(2, "0");
-  return now.toISOString().slice(0, 19) + "." + ms2 + sign + hh + ":" + mm;
+  // XL/CIAM expects offset WITHOUT colon, e.g. +0700 (not +07:00).
+  return now.toISOString().slice(0, 19) + "." + ms2 + sign + hh + mm;
 }
 export function tsGmt7WithoutColon(dt) {
   const gmt7 = new Date(dt.getTime() + 7 * 3600 * 1000);
