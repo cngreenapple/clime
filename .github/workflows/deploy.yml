@@ -46,27 +46,17 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ env.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           set +e
-          # The namespace title is "MEKV" (binding name, not prefixed with worker name).
-          echo "Listing existing KV namespaces..."
+          # The MEKV namespace already exists (id below). Reuse it; only create if truly missing.
+          EXISTING_ID="4a9230e7bb794fe4b9f513d38957c8e4"
           LIST=$(npx wrangler kv namespace list --config wrangler.jsonc 2>&1)
-          echo "$LIST"
-          # id precedes title in the JSON object, so extract id from the MEKV line's object.
-          EXISTING=$(echo "$LIST" | grep -o '{"id":"[0-9a-f]\{32\}","title":"MEKV"' | grep -o '[0-9a-f]\{32\}' | head -1)
-          if [ -z "$EXISTING" ]; then
-            echo "Creating MEKV namespace..."
+          if ! echo "$LIST" | grep -q "$EXISTING_ID"; then
+            echo "MEKV namespace not found, creating..."
             CREATE=$(npx wrangler kv namespace create MEKV --config wrangler.jsonc 2>&1)
             echo "$CREATE"
             NEW_ID=$(echo "$CREATE" | grep -o '[0-9a-f]\{32\}' | head -1)
-            # If create failed because it already exists, reuse the listed id.
-            if [ -z "$NEW_ID" ]; then
-              NEW_ID=$(echo "$LIST" | grep -o '{"id":"[0-9a-f]\{32\}","title":"MEKV"' | grep -o '[0-9a-f]\{32\}' | head -1)
-            fi
+            [ -z "$NEW_ID" ] && NEW_ID="$EXISTING_ID"
           else
-            NEW_ID="$EXISTING"
-          fi
-          if [ -z "$NEW_ID" ]; then
-            echo "::error::Could not resolve MEKV namespace id"
-            exit 1
+            NEW_ID="$EXISTING_ID"
           fi
           echo "Using KV id: $NEW_ID"
           node -e "const fs=require('fs');const p='wrangler.jsonc';let s=fs.readFileSync(p,'utf8');s=s.replace(/\"id\":\s*\"[0-9a-f]{32}\"/,'\"id\": \"'+process.env.KVID+'\"');fs.writeFileSync(p,s);" KVID="$NEW_ID"
