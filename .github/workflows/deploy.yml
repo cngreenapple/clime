@@ -50,7 +50,8 @@ jobs:
           echo "Listing existing KV namespaces..."
           LIST=$(npx wrangler kv namespace list --config wrangler.jsonc 2>&1)
           echo "$LIST"
-          EXISTING=$(echo "$LIST" | grep -o '"title":"MEKV"[^}]*' | grep -o '"id":"[0-9a-f]*"' | head -1 | grep -o '[0-9a-f]\{32\}')
+          # id precedes title in the JSON object, so extract id from the MEKV line's object.
+          EXISTING=$(echo "$LIST" | grep -o '{"id":"[0-9a-f]\{32\}","title":"MEKV"' | grep -o '[0-9a-f]\{32\}' | head -1)
           if [ -z "$EXISTING" ]; then
             echo "Creating MEKV namespace..."
             CREATE=$(npx wrangler kv namespace create MEKV --config wrangler.jsonc 2>&1)
@@ -58,7 +59,7 @@ jobs:
             NEW_ID=$(echo "$CREATE" | grep -o '[0-9a-f]\{32\}' | head -1)
             # If create failed because it already exists, reuse the listed id.
             if [ -z "$NEW_ID" ]; then
-              NEW_ID=$(echo "$LIST" | grep -o '"title":"MEKV"[^}]*' | grep -o '"id":"[0-9a-f]*"' | head -1 | grep -o '[0-9a-f]\{32\}')
+              NEW_ID=$(echo "$LIST" | grep -o '{"id":"[0-9a-f]\{32\}","title":"MEKV"' | grep -o '[0-9a-f]\{32\}' | head -1)
             fi
           else
             NEW_ID="$EXISTING"
