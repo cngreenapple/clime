@@ -28,11 +28,12 @@ jobs:
           set +e
           # Global API key + email can hit /user to get the default account id.
           RESP=$(curl -s -H "X-Auth-Email: $CLOUDFLARE_EMAIL" -H "X-Auth-Key: $CLOUDFLARE_API_KEY" \
-            "https://api.cloudflare.com/client/v4/user")
+            "https://api.cloudflare.com/client/v4/accounts?per_page=1")
           echo "$RESP"
-          ACCT=$(echo "$RESP" | grep -o '"default_account_id":"[0-9a-f]*"' | head -1 | grep -o '[0-9a-f]\{32\}')
+          # First account id from the accounts list (global API key + email).
+          ACCT=$(echo "$RESP" | grep -o '"id":"[0-9a-f]\{32\}"' | head -1 | grep -o '[0-9a-f]\{32\}')
           if [ -z "$ACCT" ]; then
-            echo "::error::Could not resolve account id from /user"
+            echo "::error::Could not resolve account id from /accounts"
             exit 1
           fi
           echo "CLOUDFLARE_ACCOUNT_ID=$ACCT" >> "$GITHUB_ENV"
