@@ -21,7 +21,6 @@ jobs:
         run: npm install
 
       - name: Ensure KV namespace exists
-        working-directory: me-cli-webui
         env:
           CLOUDFLARE_API_KEY: ${{ secrets.CLOUDFLARE_API_KEY }}
           CLOUDFLARE_EMAIL: ${{ secrets.CLOUDFLARE_EMAIL }}
@@ -44,7 +43,6 @@ jobs:
           apiKey: ${{ secrets.CLOUDFLARE_API_KEY }}
           email: ${{ secrets.CLOUDFLARE_EMAIL }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          workingDirectory: me-cli-webui
           command: deploy --config wrangler.jsonc
         env:
           CLOUDFLARE_API_KEY: ${{ secrets.CLOUDFLARE_API_KEY }}
