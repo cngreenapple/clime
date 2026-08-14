@@ -20,6 +20,24 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      - name: Ensure KV namespace exists
+        working-directory: me-cli-webui
+        env:
+          CLOUDFLARE_API_KEY: ${{ secrets.CLOUDFLARE_API_KEY }}
+          CLOUDFLARE_EMAIL: ${{ secrets.CLOUDFLARE_EMAIL }}
+        run: |
+          # Create the MEKV namespace once; reuse id if already present.
+          EXISTING=$(npx wrangler kv namespace list --config wrangler.jsonc 2>/dev/null | grep -o '"title":"me-cli-webui-MEKV"[^}]*' | grep -o '"id":"[0-9a-f]*"' | head -1 | grep -o '[0-9a-f]\{32\}')
+          if [ -z "$EXISTING" ]; then
+            echo "Creating MEKV namespace..."
+            NEW_ID=$(npx wrangler kv namespace create MEKV --config wrangler.jsonc 2>/dev/null | grep -o '[0-9a-f]\{32\}' | head -1)
+          else
+            NEW_ID="$EXISTING"
+          fi
+          echo "Using KV id: $NEW_ID"
+          # Patch wrangler.jsonc with the real namespace id.
+          node -e "const fs=require('fs');const p='wrangler.jsonc';let s=fs.readFileSync(p,'utf8');s=s.replace(/\"id\":\s*\"[0-9a-f]{32}\"/,'\"id\": \"'+process.env.KVID+'\"');fs.writeFileSync(p,s);" KVID="$NEW_ID"
+
       - name: Deploy
         uses: cloudflare/wrangler-action@v3
         with:
