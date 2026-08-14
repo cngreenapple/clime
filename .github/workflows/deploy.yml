@@ -20,11 +20,29 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      - name: Resolve Cloudflare Account ID
+        env:
+          CLOUDFLARE_API_KEY: ${{ secrets.CLOUDFLARE_API_KEY }}
+          CLOUDFLARE_EMAIL: ${{ secrets.CLOUDFLARE_EMAIL }}
+        run: |
+          set +e
+          # Global API key + email can hit /user to get the default account id.
+          RESP=$(curl -s -H "X-Auth-Email: $CLOUDFLARE_EMAIL" -H "X-Auth-Key: $CLOUDFLARE_API_KEY" \
+            "https://api.cloudflare.com/client/v4/user")
+          echo "$RESP"
+          ACCT=$(echo "$RESP" | grep -o '"default_account_id":"[0-9a-f]*"' | head -1 | grep -o '[0-9a-f]\{32\}')
+          if [ -z "$ACCT" ]; then
+            echo "::error::Could not resolve account id from /user"
+            exit 1
+          fi
+          echo "CLOUDFLARE_ACCOUNT_ID=$ACCT" >> "$GITHUB_ENV"
+          echo "Using account id: $ACCT"
+
       - name: Ensure KV namespace exists
         env:
           CLOUDFLARE_API_KEY: ${{ secrets.CLOUDFLARE_API_KEY }}
           CLOUDFLARE_EMAIL: ${{ secrets.CLOUDFLARE_EMAIL }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ env.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           set +e
           # wrangler names the namespace "<worker>-<binding>" => "me-cli-webui-MEKV"
@@ -51,7 +69,7 @@ jobs:
       - name: Deploy
         uses: cloudflare/wrangler-action@v3
         with:
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          accountId: ${{ env.CLOUDFLARE_ACCOUNT_ID }}
           command: deploy --config wrangler.jsonc
         env:
           CLOUDFLARE_API_KEY: ${{ secrets.CLOUDFLARE_API_KEY }}
