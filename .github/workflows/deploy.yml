@@ -46,16 +46,20 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ env.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           set +e
-          # wrangler names the namespace "<worker>-<binding>" => "me-cli-webui-MEKV"
+          # The namespace title is "MEKV" (binding name, not prefixed with worker name).
           echo "Listing existing KV namespaces..."
           LIST=$(npx wrangler kv namespace list --config wrangler.jsonc 2>&1)
           echo "$LIST"
-          EXISTING=$(echo "$LIST" | grep -o '"title":"me-cli-webui-MEKV"[^}]*' | grep -o '"id":"[0-9a-f]*"' | head -1 | grep -o '[0-9a-f]\{32\}')
+          EXISTING=$(echo "$LIST" | grep -o '"title":"MEKV"[^}]*' | grep -o '"id":"[0-9a-f]*"' | head -1 | grep -o '[0-9a-f]\{32\}')
           if [ -z "$EXISTING" ]; then
             echo "Creating MEKV namespace..."
             CREATE=$(npx wrangler kv namespace create MEKV --config wrangler.jsonc 2>&1)
             echo "$CREATE"
             NEW_ID=$(echo "$CREATE" | grep -o '[0-9a-f]\{32\}' | head -1)
+            # If create failed because it already exists, reuse the listed id.
+            if [ -z "$NEW_ID" ]; then
+              NEW_ID=$(echo "$LIST" | grep -o '"title":"MEKV"[^}]*' | grep -o '"id":"[0-9a-f]*"' | head -1 | grep -o '[0-9a-f]\{32\}')
+            fi
           else
             NEW_ID="$EXISTING"
           fi
